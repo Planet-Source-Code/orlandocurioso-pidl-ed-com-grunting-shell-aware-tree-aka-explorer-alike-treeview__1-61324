@@ -1,0 +1,86 @@
+
+' ! not double-word aligned !
+Private Type SHFILEOP_STRUCT
+   hWnd              As Long
+   wFunc             As Long
+   pFrom             As String
+   pTo               As String
+   fFlags            As Integer
+   ' don't use without shifting bytearray -> Q151799 HOWTO: Use the Animated Copy Functions in Windows 95/98/Me
+   fAborted          As Boolean
+   hNameMaps         As Long
+   sProgress         As String
+End Type
+
+'File Operations
+Private Enum eSHFileOperations
+   FO_MOVE = &H1                       ' pFrom , pTo
+   FO_COPY = &H2                       ' pFrom , pTo
+   FO_DELETE = &H3                     ' pFrom
+   FO_RENAME = &H4                     ' pFrom
+End Enum
+
+'File Operation Flags
+Private Enum eSHFileOperationFlags
+   FOF_MULTIDESTFILES = &H1            'The pTo member specifies multiple destination files (one for each source file) rather than one directory where all source files are to be deposited.
+   FOF_CONFIRMMOUSE = &H2              'Not currently used.
+   FOF_SILENT = &H4                    'Do not display a progress dialog box
+   FOF_RENAMEONCOLLISION = &H8         'Give the file being operated on a new name in a move, copy, or rename operation if a file with the target name already exists.
+   FOF_NOCONFIRMATION = &H10           'don't prompt the user.
+   FOF_WANTMAPPINGHANDLE = &H20        'Fill in SHFILEOPSTRUCT.hNameMappings. Must be freed using SHFreeNameMappings
+   FOF_ALLOWUNDO = &H40                'Preserve Undo information, if possible. If pFrom does not contain fully qualified path and file names, this flag is ignored.
+   FOF_FILESONLY = &H80                'on *.*, do only files
+   FOF_SIMPLEPROGRESS = &H100          'don't show names of files
+   FOF_NOCONFIRMMKDIR = &H200          'don't confirm making any needed dirs
+   FOF_NOERRORUI = &H400               'don't put up error UI
+   FOF_NORECURSION = &H1000            'don't recurse into directories
+   FOF_NOCOPYSECURITYATTRIBS = &H800   'don't copy NT file Security Attributes
+#If WIN32_IE >= &H500 Then
+   FOF_NO_CONNECTED_ELEMENTS = &H2000  'Shell v5+: don't operate on connected file elements
+   FOF_WANTNUKEWARNING = &H4000        'Shell v5+: during delete operation, warn if nuking instead of recycling (partially overrides FOF_NOCONFIRMATION)
+   FOF_NORECURSEREPARSE = &H8000&      'Shell v5.1+: treat reparse points as objects, not containers
+#End If
+End Enum
+
+'Private Declare Function SHFileOperation Lib "shell32.dll" (lpFileOp As SHFILEOP_STRUCT) As Long
+Private Declare Function SHFileOperationAny Lib "shell32.dll" Alias "SHFileOperation" (lpFileOp As Any) As Long
+
+
+' Operates on (multiple) filesystem items.
+Private Function pFileOperation(saSource() As String, sDestination As String, _
+                                ByVal Operation As eSHFileOperations, _
+                                Optional ByVal Flags As eSHFileOperationFlags) As OLE_TRISTATE
+   Dim tSHFO    As SHFILEOP_STRUCT
+   Dim foBuf()  As Byte
+
+   ' Q151799 HOWTO: Use the Animated Copy Functions in Windows 95/98/Me
+   With tSHFO
+      .hWnd = m_hOwner
+      .wFunc = Operation
+      .pFrom = Join(saSource, vbNullChar) & vbNullChar
+      .pTo = sDestination
+      .fFlags = Flags
+      ' DWORD alignment issue
+'      .fAborted
+'      .hNameMaps
+'      .sProgress
+   End With
+
+   ReDim foBuf(1 To LenB(tSHFO))                ' dim byte array to size of the structure
+   CopyMemory foBuf(1), tSHFO, LenB(tSHFO)      ' copy the structure into byte array
+   CopyMemory foBuf(19), foBuf(21), 12&         ' move the last 12 bytes by 2 to byte align the data
+
+   If SHFileOperationAny(foBuf(1)) = 0 Then
+      ' success
+      pFileOperation = Checked
+   Else
+      If (foBuf(19) <> 0) Then                   ' == Not tSHFO.fAborted , Q151799 is wrong in using fAborted
+         ' user aborted
+         pFileOperation = Gray
+      Else
+         ' failed / file in use
+         pFileOperation = Unchecked
+      End If
+   End If
+
+End Function

@@ -1,0 +1,123 @@
+// IStream.odl
+// all interface methods return HRESULT. Exchanged for long to use return when calling from VB.
+// -> interfaces can't be implemented in VB, just for calling purposes!
+
+
+    typedef enum tagSTGTY
+    {
+        STGTY_STORAGE   = 1,
+        STGTY_STREAM    = 2,
+        STGTY_LOCKBYTES = 3,
+        STGTY_PROPERTY  = 4
+    } STGTY;
+
+	typedef enum tagSTATFLAG
+	{
+		STATFLAG_DEFAULT = 0,
+		STATFLAG_NONAME = 1
+	} STATFLAG;
+	
+	typedef enum tagSTGC
+	{
+		STGC_DEFAULT = 0,
+		STGC_OVERWRITE = 1,
+		STGC_ONLYIFCURRENT = 2,
+		STGC_DANGEROUSLYCOMMITMERELYTODISKCACHE = 4,
+		STGC_CONSOLIDATE = 8
+	} STGC;
+
+    typedef enum tagSTREAM_SEEK
+    {
+        STREAM_SEEK_SET = 0,
+        STREAM_SEEK_CUR = 1,
+        STREAM_SEEK_END = 2
+    } STREAM_SEEK;
+
+    typedef enum tagLOCKTYPE
+    {
+        LOCK_WRITE      = 1,
+        LOCK_EXCLUSIVE  = 2,
+        LOCK_ONLYONCE   = 4
+    } LOCKTYPE;
+
+    typedef struct tagSTATSTG
+    {
+      	long	 	pwcsName;			//      LPOLESTR 	pwcsName;
+        STGTY 		type;
+        ULARGE_INTEGER cbSize;
+        FILETIME 	mtime;
+        FILETIME 	ctime;
+        FILETIME 	atime;
+        STGM 		grfMode;
+        LOCKTYPE 	grfLocksSupported;
+        CLSID 		clsid;
+        DWORD 		grfStateBits;
+        DWORD 		reserved;
+    } STATSTG;    
+    
+    //---------------------------------------------------------
+    // IStream
+    //
+    // (this interface is actually derived from ISequentialStream)
+    //  
+    //---------------------------------------------------------
+
+    [
+        uuid(0000000c-0000-0000-C000-000000000046),
+        helpstring("IStream Interface"),
+        odl
+    ]
+    interface IStream : IUnknown
+    {
+
+        // ISequentialStream Methods
+        long Read(
+			[in, out]  	void 	*pv,
+	        [in]		ULONG 	cb,
+	        [in, out]  	ULONG 	*pcbRead);
+
+        long Write(
+			[in] 	  	void 	*pv,
+            [in] 		ULONG 	cb,
+            [in, out]  	ULONG 	*pcbWritten);
+
+
+        //IStream
+
+        long Seek(
+   			[in] 		ULARGE_INTEGER 	dlibMove,
+   			[in] 		STREAM_SEEK		dwOrigin,
+   			[in, out]  	ULARGE_INTEGER 	*plibNewPosition);
+
+        long SetSize(
+			[in] 		ULARGE_INTEGER 	libNewSize);
+
+        long CopyTo(
+			[in] 		IStream 		*pstm,
+            [in] 		ULARGE_INTEGER 	cb,
+            [in, out] 	ULARGE_INTEGER 	*pcbRead,
+            [in, out] 	ULARGE_INTEGER 	*pcbWritten);
+
+        long Commit(
+        	[in] 		STGC 			grfCommitFlags);
+
+        long Revert();
+
+        long LockRegion(
+            [in] 		ULARGE_INTEGER 	libOffset,
+            [in] 		ULARGE_INTEGER 	cb,
+            [in] 		LOCKTYPE		dwLockType);
+
+        long UnlockRegion(
+            [in] 		ULARGE_INTEGER 	libOffset,
+            [in] 		ULARGE_INTEGER 	cb,
+            [in] 		LOCKTYPE		dwLockType);
+            
+        long Stat(
+            [in, out] 	STATSTG 		*pstatstg,
+            [in] 		STATFLAG		grfStatFlag);
+
+        long Clone(
+            [in, out] 	IStream 		**ppstm);
+
+    }

@@ -1,0 +1,95 @@
+Private Function pIExtractIconW(ByVal hOwner As Long, isfParent As IShellFolder, _
+                                ByVal cPidls As Long, pidlRel As Long _
+                                ) As IExtractIconW
+   Dim hr      As Long
+   Dim iei     As IExtractIconW
+
+   Debug.Assert cPidls = 1
+
+   ' Get a reference to the item's IExtractIconW interface
+   hr = isfParent.GetUIObjectOf(hOwner, cPidls, pidlRel, GetRIID(rIID_IExtractIconW), 0, iei)
+   If hr = S_OK Then
+      Set pIExtractIconW = iei
+   End If
+
+End Function
+
+
+
+Private Function pGetFileIconIndices(isfParent As IShellFolder, pidlRel As Long, _
+                                     idxImg As Long, idxSelImg As Long) As Boolean
+
+   Dim iei     As IExtractIconW
+   Dim sLoc    As String
+   Dim gFlagsI As GETICONLOCATIONINPUT
+   Dim gFlagsR As GETICONLOCATIONRETURN
+   
+   Set iei = pIExtractIconW(m_hOwner, isfParent, 1, pidlRel)
+   If Not (iei Is Nothing) Then
+      
+      sLoc = Space$(MAX_PATH)
+      
+      gFlagsI = GIL_FORSHELL
+      
+      If S_OK = iei.GetIconLocation(gFlagsI, sLoc, MAX_PATH, _
+                                    idxImg, VarPtr(gFlagsR)) Then
+         Debug.Assert gFlagsR = 0
+         If idxImg < 0 Then idxImg = &HFF& - Not idxImg  ' # ? #
+         
+         gFlagsI = GIL_FORSHELL Or GIL_OPENICON
+         
+         If S_OK = iei.GetIconLocation(gFlagsI, sLoc, MAX_PATH, _
+                                       idxSelImg, VarPtr(gFlagsR)) Then
+            Debug.Assert gFlagsR = 0
+            If idxSelImg < 0 Then idxSelImg = &HFF& - Not idxSelImg  ' # ? #
+            
+            Debug.Print idxImg, idxSelImg, sLoc, gFlagsR
+            pGetFileIconIndices = True
+            
+         Else: Debug.Assert False: idxSelImg = idxImg
+         End If
+         
+      Else: Debug.Assert False
+      End If
+   Else: Debug.Assert False
+   End If
+
+End Function
+
+
+
+' IShellIcon
+
+
+Private Function pGetFileIconIndices(isfParent As IShellFolder, pidlRel As Long, _
+                                     idxImg As Long, idxSelImg As Long) As Boolean
+
+   Dim hr      As Long
+   Dim isi     As IShellIcon
+   
+   
+   If S_OK = isfParent.QueryInterface(GetRIID(rIID_IShellIcon), isi) Then
+   
+      Debug.Assert S_FALSE = isi.GetIconOf(pidlRel, GIL_FORSHELL, idxImg)
+      
+'      If S_OK = isi.GetIconOf(pidlRel, GIL_FORSHELL, idxImg) Then
+'
+'         If idxImg < 0 Then idxImg = &HFF& - Not idxImg  ' # ? #
+'
+'         If S_OK = isi.GetIconOf(pidlRel, GIL_FORSHELL Or GIL_OPENICON, idxSelImg) Then
+'
+'            If idxSelImg < 0 Then idxSelImg = &HFF& - Not idxSelImg  ' # ? #
+'
+'            Debug.Print idxImg, idxSelImg
+'            pGetFileIconIndices = True
+'
+'         Else: Debug.Assert False: idxSelImg = idxImg
+'         End If
+'
+''      Else: Debug.Assert False
+'      End If
+   Else
+'      Debug.Assert False
+   End If
+
+End Function

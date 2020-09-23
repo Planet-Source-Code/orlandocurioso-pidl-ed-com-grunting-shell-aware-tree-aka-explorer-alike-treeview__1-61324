@@ -1,0 +1,109 @@
+// IDropHelper.odl
+// all interface methods return HRESULT. Exchanged for long to use return when calling from VB.
+// -> interfaces can't be implemented in VB, just for calling purposes!
+
+#if (_WIN32_IE >= 0x0500)
+
+
+// {4657278A-411B-11d2-839A-00C04FD918D0}
+
+// DEFINE_GUID(CLSID_DragDropHelper,   0x4657278a, 0x411b, 0x11d2, 0x83, 0x9a, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0);
+
+// {4657278B-411B-11d2-839A-00C04FD918D0}
+
+// DEFINE_GUID(IID_IDropTargetHelper,  0x4657278b, 0x411b, 0x11d2, 0x83, 0x9a, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0);
+
+// {DE5BF786-477A-11d2-839D-00C04FD918D0}
+
+// DEFINE_GUID(IID_IDragSourceHelper,  0xde5bf786, 0x477a, 0x11d2, 0x83, 0x9d, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0);
+
+/*
+	typedef struct	{
+		SIZE 	   sizeDragImage;
+		POINT 	   ptOffset;
+		HBITMAP    hbmpDragImage;
+		COLORREF   crColorKey;
+	} SHDRAGIMAGE;
+*/
+	typedef struct	{
+		long 	   wDragImage;
+		long 	   hDragImage;		
+		long 	   xOffset;
+		long 	   yOffset;
+		HBITMAP    hbmpDragImage;
+		COLORREF   crColorKey;
+	} SHDRAGIMAGE;
+
+
+    [
+        uuid(DE5BF786-477A-11d2-839D-00C04FD918D0), 
+        helpstring("IDragSourceHelper Interface"),
+        odl
+    ]
+    interface IDragSourceHelper : IUnknown
+    {
+
+        typedef IDragSourceHelper *LPDragSourceHelper;			
+
+		long InitializeFromBitmap
+		(  
+            [in] SHDRAGIMAGE   *pshdi,
+            [in] IDataObject   *pDataObject
+		);
+
+		long InitializeFromWindow
+		( 
+            [in] HWND 		 hwnd,
+        	[in] long 		 ppt,				// [in] POINT* pt
+            [in] IDataObject *pDataObject
+		);
+
+    }
+
+                                                                                                        
+
+    [
+        uuid(4657278B-411B-11d2-839A-00C04FD918D0), 
+        helpstring("IDropTargetHelper Interface"),
+        odl
+    ]
+    interface IDropTargetHelper : IUnknown
+    {
+
+        typedef IDropTargetHelper *LPDropTargetHelper;			
+
+
+        long DragEnter
+        (
+            [in] HWND 		 hwndTarget,
+            [in] IDataObject *pDataObject,
+        	[in] long 		 ppt,				// [in] POINT* pt
+            [in] DWORD 		 dwEffect
+        );
+
+        long DragLeave(void);
+        
+        long DragOver
+        (
+        	[in] long 		 ppt,				// [in] POINT* pt
+            [in] DWORD 		 dwEffect
+        );
+
+
+        long Drop
+        (
+            [in] IDataObject *pDataObject,
+        	[in] long 		 ppt,				// [in] POINT* pt
+            [in] DWORD 		 dwEffect
+        );
+        
+		long Show
+		(
+		    [in] BOOL        fShow
+		);
+        
+    }
+
+                                                                
+                                                                                                      
+#endif /* _WIN32_IE >= 0x0500 */                                                                        

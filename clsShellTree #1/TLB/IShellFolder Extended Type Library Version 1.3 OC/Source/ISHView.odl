@@ -1,0 +1,366 @@
+
+//--------------------------------------------------------------------------
+//
+// FOLDERSETTINGS
+//
+//  FOLDERSETTINGS is a data structure that explorer passes from one folder
+// view to another, when the user is browsing. It calls ISV::GetCurrentInfo
+// member to get the current settings and pass it to ISV::CreateViewWindow
+// to allow the next folder view "inherit" it. These settings assumes a
+// particular UI (which the shell's folder view has), and shell extensions
+// may or may not use those settings.
+//
+//--------------------------------------------------------------------------
+
+typedef LPBYTE LPVIEWSETTINGS;
+
+// NB Bitfields.
+// FWF_DESKTOP implies FWF_TRANSPARENT/NOCLIENTEDGE/NOSCROLL
+typedef enum
+{
+    FWF_AUTOARRANGE =       0x0001,
+    FWF_ABBREVIATEDNAMES =  0x0002,
+    FWF_SNAPTOGRID =        0x0004,
+    FWF_OWNERDATA =         0x0008,
+    FWF_BESTFITWINDOW =     0x0010,
+    FWF_DESKTOP =           0x0020,
+    FWF_SINGLESEL =         0x0040,
+    FWF_NOSUBFOLDERS =      0x0080,
+    FWF_TRANSPARENT  =      0x0100,
+    FWF_NOCLIENTEDGE =      0x0200,
+    FWF_NOSCROLL     =      0x0400,
+    FWF_ALIGNLEFT    =      0x0800,
+    FWF_SINGLECLICKACTIVATE=0x8000  // TEMPORARY -- NO UI FOR THIS
+} FOLDERFLAGS;
+
+typedef enum
+{
+    FVM_ICON =              1,
+    FVM_SMALLICON =         2,
+    FVM_LIST =              3,
+    FVM_DETAILS =           4,
+    FVM_THUMBNAIL= 			5,
+	FVM_TILE= 				6,
+	FVM_THUMBSTRIP= 		7
+} FOLDERVIEWMODE;
+
+typedef struct
+{
+    UINT ViewMode;       // View mode (FOLDERVIEWMODE values)
+    UINT fFlags;         // View options (FOLDERFLAGS bits)
+} FOLDERSETTINGS;
+typedef FOLDERSETTINGS * LPFOLDERSETTINGS;
+// typedef const FOLDERSETTINGS * LPCFOLDERSETTINGS;
+typedef FOLDERSETTINGS * LPCFOLDERSETTINGS;
+
+/////////////////////////////////////////////////////////////////////
+//==========================================================================
+//
+// Interface:   IShellView
+//
+// IShellView::GetWindow(phwnd)
+//
+//   Inherited from IOleWindow::GetWindow.
+//
+//
+// IShellView::ContextSensitiveHelp(fEnterMode)
+//
+//   Inherited from IOleWindow::ContextSensitiveHelp.
+//
+//
+// IShellView::TranslateAccelerator(lpmsg)
+//
+//   Similar to IOleInPlaceActiveObject::TranlateAccelerator. The explorer
+//  calls this function BEFORE any other translation. Returning S_OK
+//  indicates that the message was translated (eaten) and should not be
+//  translated or dispatched by the explorer.
+//
+//
+// IShellView::EnableModeless(fEnable)
+//   Similar to IOleInPlaceActiveObject::EnableModeless.
+//
+//
+// IShellView::UIActivate(uState)
+//
+//   The explorer calls this member function whenever the activation
+//  state of the view window is changed by a certain event that is
+//  NOT caused by the shell view itself.
+//
+//   SVUIA_DEACTIVATE will be passed when the explorer is about to
+//  destroy the shell view window; the shell view is supposed to remove
+//  all the extended UIs (typically merged menu and modeless popup windows).
+//
+//   SVUIA_ACTIVATE_NOFOCUS will be passsed when the shell view is losing
+//  the input focus or the shell view has been just created without the
+//  input focus; the shell view is supposed to set menuitems appropriate
+//  for non-focused state (no selection specific items should be added).
+//
+//   SVUIA_ACTIVATE_FOCUS will be passed when the explorer has just
+//  created the view window with the input focus; the shell view is
+//  supposed to set menuitems appropriate for focused state.
+//
+//   SVUIA_INPLACEACTIVATE(new) will be passed when the shell view is opened
+//  within an ActiveX control, which is not a UI active. In this case,
+//  the shell view should not merge menus or put toolbas. To be compatible
+//  with Win95 client, we don't pass this value unless the view supports
+//  IShellView2.
+//
+//   The shell view should not change focus within this member function.
+//  The shell view should not hook the WM_KILLFOCUS message to remerge
+//  menuitems. However, the shell view typically hook the WM_SETFOCUS
+//  message, and re-merge the menu after calling IShellBrowser::
+//  OnViewWindowActivated.
+//
+//
+// IShellView::Refresh()
+//
+//   The explorer calls this member when the view needs to refresh its
+//  contents (such as when the user hits F5 key).
+//
+//
+// IShellView::CreateViewWindow
+//
+//   This member creates the view window (right-pane of the explorer or the
+//  client window of the folder window).
+//
+//
+// IShellView::DestroyViewWindow
+//
+//   This member destroys the view window.
+//
+//
+// IShellView::GetCurrentInfo
+//
+//   This member returns the folder settings.
+//
+//
+// IShellView::AddPropertySHeetPages
+//
+//   The explorer calls this member when it is opening the option property
+//  sheet. This allows the view to add additional pages to it.
+//
+//
+// IShellView::SaveViewState()
+//
+//   The explorer calls this member when the shell view is supposed to
+//  store its view settings. The shell view is supposed to get a view
+//  stream by calling IShellBrowser::GetViewStateStream and store the
+//  current view state into that stream.
+//
+//
+// IShellView::SelectItem(pidlItem, uFlags)
+//
+//   The explorer calls this member to change the selection state of
+//  item(s) within the shell view window.  If pidlItem is NULL and uFlags
+//  is SVSI_DESELECTOTHERS, all items should be deselected.
+//
+//-------------------------------------------------------------------------
+
+
+//
+// shellview select item flags 
+//
+typedef enum {                     // were #defines
+    SVSI_DESELECT       = 0x0000,
+    SVSI_SELECT         = 0x0001,
+    SVSI_EDIT           = 0x0003,  // includes select
+    SVSI_DESELECTOTHERS = 0x0004,
+    SVSI_ENSUREVISIBLE  = 0x0008,
+    SVSI_FOCUSED        = 0x0010,
+} SVSI;
+
+//
+// shellview get item object flags
+//
+typedef enum {                     // were #defines
+    SVGIO_BACKGROUND    = 0x00000000,
+    SVGIO_SELECTION     = 0x00000001,
+    SVGIO_ALLVIEW       = 0x00000002,
+} SVGIO;
+
+//
+// uState values for IShellView::UIActivate
+//
+typedef enum {
+    SVUIA_DEACTIVATE       = 0,
+    SVUIA_ACTIVATE_NOFOCUS = 1,
+    SVUIA_ACTIVATE_FOCUS   = 2,
+    SVUIA_INPLACEACTIVATE  = 3          // new flag for IShellView2
+} SVUIA_STATUS;
+
+
+///////////////////////////////////////////////////////////////////
+// IOleWindow 
+
+[
+//    object,
+    uuid(00000114-0000-0000-C000-000000000046),
+//    pointer_default(unique)
+    helpstring("IOleWindow Interface"),
+    odl
+]
+
+interface IOleWindow : IUnknown
+{
+//    typedef [unique] IOleWindow *LPOLEWINDOW;
+    typedef IOleWindow *LPOLEWINDOW;
+
+//    [input_sync]
+    long    GetWindow(
+                [in,out]    HWND *phwnd);
+
+    HRESULT ContextSensitiveHelp(
+                [in]        BOOL fEnterMode);
+}
+
+
+///////////////////////////////////////////////////////////////////
+// IShellView
+
+[   odl,
+    helpstring("IShellView interface"),
+    uuid(000214E3-0000-0000-C000-000000000046)
+]
+
+interface IShellView : IOleWindow
+{
+    // *** IUnknown methods ***
+    // *** IOleWindow methods ***
+
+    // *** IShellView methods ***
+    long    TranslateAccelerator(
+                [in]        long lpmsg);    // LPMSG
+
+#ifdef _FIX_ENABLEMODELESS_CONFLICT
+    long    EnableModelessSV(
+                [in]        BOOL fEnable);
+#else
+    long    EnableModeless(
+                [in]        BOOL fEnable);
+#endif
+
+    long    UIActivate(
+                [in]        UINT uState);
+
+    long    Refresh();
+
+    // E_NOTIMPL
+    long    CreateViewWindow(
+                [in]        IShellView          *lpPrevView,
+                [in]        LPCFOLDERSETTINGS   lpfs,
+                [in]        long                *psb,       // IShellBrowser
+                [in]        long                *prcView,   // RECT
+                [in,out]    HWND                *phWnd);
+
+    long    DestroyViewWindow();
+
+    long    GetCurrentInfo(
+                [in,out]    LPFOLDERSETTINGS    lpfs);
+
+    // E_NOTIMPL
+    long    AddPropertySheetPages(
+                [in]        DWORD               dwReserved,
+                [in]        long                lpfn,       // LPFNADDPROPSHEETPAGE
+                [in]        LPARAM              lparam);
+
+    long    SaveViewState();
+
+    long    SelectItem(
+                [in]        LPCITEMIDLIST       pidlItem,
+                [in]        UINT                uFlags);
+
+    long    GetItemObject(
+                [in]        UINT                uItem,
+                [in]        REFIID              riid,
+                [in,out]    LPVOID              ppv);
+};
+
+typedef IShellView *    LPSHELLVIEW;
+
+typedef GUID SHELLVIEWID;
+
+
+///////////////////////////////////////////////////////////////////
+
+#define SV2GV_CURRENTVIEW ((UINT)-1)
+#define SV2GV_DEFAULTVIEW ((UINT)-2)
+
+typedef struct _SV2CVW2_PARAMS
+{
+        DWORD cbSize;
+
+        IShellView              *psvPrev;
+        FOLDERSETTINGS          *pfs;       // const
+        long                    *psbOwner;  // IShellBrowser
+        long                    *prcView;   // RECT
+        SHELLVIEWID             *pvid;      // const
+
+        HWND hwndView;
+} SV2CVW2_PARAMS;
+typedef SV2CVW2_PARAMS *LPSV2CVW2_PARAMS;
+
+#undef  INTERFACE
+#define INTERFACE   IShellView2
+
+
+///////////////////////////////////////////////////////////////////
+// IShellView2
+
+[   odl,
+    helpstring("IShellView2 interface"),
+    uuid(88E39E80-3578-11CF-AE69-08002B2E1262)
+]
+
+
+interface IShellView2 : IShellView
+{
+    // *** IUnknown methods ***
+    // *** IOleWindow methods ***
+    // *** IShellView methods ***
+    
+    // *** IShellView2 methods ***
+    long    GetView(
+                [in]        SHELLVIEWID         *pvid, 
+                [in]        ULONG               uView);
+    long    CreateViewWindow2(
+                [in]        LPSV2CVW2_PARAMS    lpParams);
+};
+
+
+///////////////////////////////////////////////////////////////////
+// ****the remainder of this file is from Chris Becke's shext.h ***
+// http://www.dbn.lia.net/users/chris
+
+// Column Info for IShellDetails::GetDetailsOf
+typedef struct
+{
+	int		justify;
+	int		width;
+	STRRET	text;
+} SHColInfo;
+
+
+///////////////////////////////////////////////////////////////////
+// IShellDetails, 
+
+[   odl,
+    helpstring("IShellDetails interface"),
+    uuid(000214EC-0000-0000-C000-000000000046)
+]
+
+interface IShellDetails : IUnknown
+{
+	// IShellDetails methods
+    long    GetDetailsOf(
+				[in]		LPCITEMIDLIST		pidl, 
+				[in]		UINT				col, 
+				[in,out]	SHColInfo			*data);
+
+	long    ColumnClick(
+				[in]		UINT				col);
+
+	// There may be a third interface function
+//	STDMETHOD(Unknown)(THIS_ DWORD) PURE;
+};
+
+typedef IShellDetails * LPSHELLDETAILS;

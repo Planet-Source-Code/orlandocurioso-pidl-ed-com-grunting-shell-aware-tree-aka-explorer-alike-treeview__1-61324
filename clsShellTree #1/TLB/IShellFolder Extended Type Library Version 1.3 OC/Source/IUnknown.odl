@@ -1,0 +1,21 @@
+[
+//  local,
+//  object,
+  uuid(00000000-0000-0000-C000-000000000046),
+//  pointer_default(unique)
+  odl
+]
+
+interface IUnknown
+{
+//    typedef [unique] IUnknown *LPUNKNOWN;
+    typedef IUnknown *LPUNKNOWN;
+
+    long  QueryInterface(
+    [in]  REFIID riid,
+    [out] void   *ppvObject);   // v1.1 r2, was **ppvObject
+
+    ULONG AddRef();
+
+    ULONG Release();
+}

@@ -1,0 +1,317 @@
+Private Sub m_ucTree_OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+   Dim isfParent     As IShellFolder
+   Dim ulAttrs       As ESFGAO
+   Dim pidlFQ        As Long
+   Dim pidlRel       As Long
+   Dim b()           As Byte
+   
+   m_hNodeDrag = m_ucTree.SelectedNode
+   If m_hNodeDrag = 0 Then: Debug.Assert False: Exit Sub
+
+   Data.Clear
+   
+   ' -- Set AllowedEffects ( == CFSTR_PREFERREDDROPEFFECT) based on user's choice --
+   Select Case True
+   
+      Case GetAsyncKeyState(vbKeyLButton) < 0
+         
+         Select Case True
+            Case GetAsyncKeyState(vbKeyMenu) < 0
+               AllowedEffects = vbDropEffectLink
+            Case (GetAsyncKeyState(vbKeyShift) < 0) And (GetAsyncKeyState(vbKeyControl) < 0)
+               AllowedEffects = vbDropEffectLink
+            Case (GetAsyncKeyState(vbKeyShift) < 0) Or (GetAsyncKeyState(vbKeyControl) < 0)
+               AllowedEffects = vbDropEffectCopy
+            Case Else
+               AllowedEffects = vbDropEffectCopy Or vbDropEffectMove Or vbDropEffectLink
+         End Select
+           
+      Case GetAsyncKeyState(vbKeyRButton) < 0
+         AllowedEffects = vbDropEffectCopy Or vbDropEffectMove Or vbDropEffectLink
+         
+      Case Else
+         AllowedEffects = vbDropEffectNone
+         m_hNodeDrag = 0
+         Exit Sub
+   End Select
+   
+   ' -- Can item be copied/moved/linked ? --
+   pDecryptNodeKey m_ucTree.NodeKey(m_hNodeDrag), pidlFQ, pidlRel    ' ## use module vars
+   Set isfParent = GetIShellFolderParent(pidlFQ, fRtnDesktop:=True)
+   
+   ulAttrs = SFGAO_CANCOPY Or SFGAO_CANMOVE Or SFGAO_CANLINK
+   
+   If SUCCEEDED(isfParent.GetAttributesOf(1, pidlRel, ulAttrs)) Then
+   
+      ' SFGAO_CANXXX == vbDropEffectXXX , vbDropEffectLink selfdefined ( == DROPEFFECT_LINK)
+      ulAttrs = ulAttrs And (SFGAO_CANCOPY Or SFGAO_CANMOVE Or SFGAO_CANLINK)
+      
+      ' restrict user's choice
+      AllowedEffects = AllowedEffects And ulAttrs
+      
+   Else
+      AllowedEffects = vbDropEffectNone
+      Debug.Assert False
+   End If
+   
+   ' -- Set data for formats --
+   If AllowedEffects <> vbDropEffectNone Then
+   
+      ' CFSTR_SHELLIDLIST format is the preferred explorer format:
+      ' - handles all data transfer scenarios: virtual and filesystem items.
+      ' - explorer accepts vbDropEffectLink.
+      ' - involves using IDataObject & CIDA structs
+      ' - implementation is VB hostile (CIDA struct), No VB code exists.  C#.NET: http://www.dotnetmonster.com/Uwe/Forum.aspx/dotnet-interop/3482/Drag-and-Drop
+
+      ' CF_HDROP format
+      ' - VB's native vbCFFiles for filesystem items
+      ' - explorer does not!!! accept vbDropEffectLink
+    ' Data.SetData , vbCFFiles
+    ' Data.Files.Add m_sPath
+      
+      ' CF_FILECONTENTS and CF_FILEDESCRIPTOR
+      ' While files from the file system have the CF_HDROP format, files from providers
+      ' such as namespace extensions generally use CFSTR_FILECONTENTS/CFSTR_FILEDESCRIPTOR.
+      ' Examples include Windows CE folders, File Transfer Protocol (FTP) folders,
+      ' Web folders, and CAB folders.
+      ' The source normally implements an IStream interface to present data
+      ' from its storage as a file.
+
+      ' CFSTR_FILENAMEA, CFSTR_FILENAMEW formats: global string with full path
+      ' old formats, but pGetVBDataObjectFromShell() does it for us
+      
+      
+      ' The easy way of populating VB's DataObject with shell data:
+      ' - always: CFSTR_SHELLIDLIST, CF_HDROP, CFSTR_FILENAMEA, CFSTR_FILENAMEW
+      ' - CFSTR_NETRESOURCES  ( formats I encountered so far)
+      If Not pGetVBDataObjectFromShell(Data, isfParent, 1, pidlRel) Then
+         AllowedEffects = vbDropEffectNone
+         Debug.Assert False
+      End If
+      
+      ' CFSTR_INDRAGLOOP format: global nonzero DWORD
+      ReDim b(0 To 3)
+      b(0) = 1: b(1) = 1: b(2) = 1: b(3) = 1
+      Data.SetData b(), RegisterClipboardFormatInt(CFSTR_INDRAGLOOP)
+      Erase b()
+      
+      
+'      If Not (m_IDataObject Is Nothing) Then
+'
+'         Dim idsh As IDragSourceHelper
+'         Set idsh = CreateIDragSourceHelper()
+'         If Not (idsh Is Nothing) Then
+'            Dim hr As Long
+'            ' RegisterWindowMessage DI_GETDRAGIMAGE, 'ShellGetDragImage' (Shlobj.h)
+'            hr = idsh.InitializeFromWindow(m_ucTree.hWnd, 0, 0, m_IDataObject)
+'            Debug.Assert hr <> S_OK
+''            Debug.Print SUCCEEDED(hr)
+''            Dim tSHDI As SHDRAGIMAGE
+''
+''            With tSHDI
+''               .crColorKey
+''               .hbmpDragImage      ' TVM_CREATEDRAGIMAGE
+''            End With
+''            hr = idsh.InitializeFromBitmap(tSHDI, m_IDataObject)
+'            Set idsh = Nothing
+'         End If
+'      End If
+      
+   Else
+      m_hNodeDrag = 0
+      
+   End If   ' AllowedEffects <> vbDropEffectNone
+   
+End Sub
+
+' Gets the COM IDataObject of the dragged shell item(s), when we source Drag & Drop.
+' Extracts the data of all formats and copies it to VB's DataObject.
+' Formats: CFSTR_SHELLIDLIST, CF_HDROP, CFSTR_FILENAMEA, CFSTR_FILENAMEW, CFSTR_NETRESOURCES
+' Advantage: Shell provides needed formats for multiple! items.
+'            Does gruntwork of setting up difficult formats (ie CFSTR_SHELLIDLIST).
+Private Function pGetVBDataObjectFromShell(Data As DataObject, isfParent As IShellFolder, _
+                                           ByVal cPidls As Long, ByVal pidlRel As Long _
+                                           ) As Boolean
+   Dim ief           As IEnumFORMATETC
+   Dim tSTGM         As STGMEDIUM
+   Dim tFOTC         As FORMATETC
+   Dim b()           As Byte
+   Dim wFormat       As Long
+   Dim hr            As Long
+   Dim dvRet         As DV_ERROR
+   Dim hGlobal       As Long
+   Dim cb            As Long
+   Dim DBP           As Integer
+   DBP = 0
+   
+   On Error GoTo Proc_Error
+
+   Debug.Assert DbgPrt(DBP >= 1, vbCrLf & "pGetVBDataObjectFromShell" & String$(60, "-"))
+
+   Set m_IDataObject = pIDataObject(m_hOwner, isfParent, cPidls, pidlRel)
+   
+   If Not (m_IDataObject Is Nothing) Then
+   
+      Dim idsh As IDragSourceHelper
+      Set idsh = CreateIDragSourceHelper()
+      If Not (idsh Is Nothing) Then
+         ' # fails with Unknown error #
+         Dim tP   As POINTAPI
+         tP.X = -16: tP.Y = 0
+'         m_ucTree.OLEDragMode = drgAutomatic
+         hr = idsh.InitializeFromWindow(m_ucTree.hWnd, VarPtr(tP), m_IDataObject)
+'         Debug.Assert hr = S_OK
+'         m_ucTree.OLEDragMode = drgManual
+         Set idsh = Nothing
+      End If
+   
+      ' get IEnumFORMATETC reference
+      If SUCCEEDED(m_IDataObject.EnumFormatEtc(DATADIR_GET, ief)) Then
+      
+         ' enumerate all formats
+         hr = ief.Next(1, tFOTC, 0)
+         
+         Do While hr = S_OK
+            
+            ' get the data tSTGM for the format specified in tFOTC
+            dvRet = m_IDataObject.GetData(tFOTC, tSTGM)
+            
+            If dvRet = S_OK Then
+            
+               ' setup this format for VB's Drag & Drop Data object.
+               ' all non VB native formats need bytearray
+               ' VB Data object accepts wFormat only as Integer
+               wFormat = LOWORD(tFOTC.cfFormat)
+               
+               Debug.Assert DbgPrt(DBP >= 1, dbgGetClipboardFormatName(tFOTC.cfFormat), wFormat, cb)
+            '  Debug.Print dbgDumpMEM(VarPtr(b(0)), cb)
+            
+               If tSTGM.TYMED = TYMED_HGLOBAL Then
+                  
+                  ' ptr to allocated global memory (maintained by IDataobject)
+                  hGlobal = tSTGM.pData
+               
+                  If hGlobal <> 0 Then
+                     
+                     ' copy data to bytearray
+                     cb = GlobalSize(hGlobal)
+                     ReDim b(0 To cb - 1)
+               
+                     CopyMemory b(0), ByVal hGlobal, cb
+                     
+                     If wFormat <> vbCFFiles Then
+                        
+                        Data.SetData b(), wFormat
+                     
+                     Else
+                        ' CF_HDROP needs extra handling:
+                        ' - VB uses Data.Files collection
+                        '   (Data.SetData b(), vbCFFiles raises error 461)
+                        ' - supports ANSI & Unicode, can be detected by DROPFILES struct
+                        Dim tDF        As DROPFILES
+                        Dim saFiles()  As String
+                        Dim idx        As Long
+                        
+                        Data.SetData , vbCFFiles
+                        
+                        CopyMemory tDF, b(0), Len(tDF)
+                        
+                        With tDF
+                           '.pFiles : Offset of file list from the beginning of tDF in bytes.
+                           ReDim b(0 To cb - 1 - .pFiles)
+                           CopyMemory b(0), ByVal (hGlobal + .pFiles), cb - .pFiles
+                           
+                           If .fWide Then
+                              ' Unicode
+                              saFiles = Split(b(), vbNullChar)
+                           Else
+                              ' ANSI
+                              saFiles = Split(StrConv(b(), vbUnicode), vbNullChar)
+                           End If
+                        End With
+                        
+                        For idx = 0 To UBound(saFiles) - 1
+                           If Len(saFiles(idx)) > 1 Then   ' == saFiles(idx) <> vbNullChar
+                              Data.Files.Add saFiles(idx)
+                              Debug.Assert DbgPrt(DBP >= 2, Data.Files.Count, saFiles(idx))
+                           End If
+                        Next
+                     
+                     End If
+                     
+                     Erase b()
+               
+                  End If
+                  
+               ElseIf tSTGM.TYMED = TYMED_ISTREAM Then
+'                  ' 'DragContext' format for IDragHelper uses IStream
+'                  ' # NoGo: setting up stream format with VB's Data object ??? #
+'                  ' #       always as global memory ?                          #
+'                  Dim iis        As IStream
+'                  Dim tSTATSTG   As STATSTG
+'                  Dim cbRead     As Long
+'
+'                  ' de-reference ptr to a stream object
+'                  CopyMemory iis, tSTGM.pData, 4&
+'
+'                  If Not (iis Is Nothing) Then
+'
+'                     If SUCCEEDED(iis.Stat(tSTATSTG, STATFLAG_NONAME)) Then
+'
+'                        ' copy data to bytearray
+'                        cb = tSTATSTG.cbSize * 10000
+'
+'                        If cb Then
+'                           ReDim b(0 To cb - 1)
+'
+'                           If SUCCEEDED(iis.Read(b(0), cb, cbRead)) Then
+'
+'                              Debug.Assert cb = cbRead
+'
+'                              Data.SetData b(), wFormat
+'
+'                              Erase b()
+'
+'                           End If
+'                        End If
+'                     End If
+'
+'                  End If
+'
+'                  CopyMemory iis, 0&, 4
+                  
+               Else
+               
+                  Debug.Assert False
+                  
+               End If
+               
+               ReleaseStgMedium tSTGM
+               
+            End If   ' dvRet = S_OK
+            Debug.Assert DbgPrt(dvRet <> S_OK And DBP >= 0, "FAILED m_IDataObject.GetData()", dvRet)
+            
+            If tFOTC.ptd <> 0 Then
+               ' If the IEnumFORMATETC::Next method returns a non-NULL DVTARGETDEVICE pointer in the ptd member of the FORMATETC structure, the memory must be freed with the CoTaskMemFree function (or its equivalent). Failure to do so will result in a memory leak.
+               CoTaskMemFree tFOTC.ptd
+            End If
+            
+            ' continue with next format
+            hr = ief.Next(1, tFOTC, 0)
+            
+         Loop
+         
+         pGetVBDataObjectFromShell = True
+         Debug.Assert DbgPrt(DBP >= 1, "")
+         
+      End If   ' SUCCEEDED(m_IDataObject.EnumFormatEtc())
+      
+   End If
+   Debug.Assert DbgPrt(m_IDataObject Is Nothing And DBP >= 1, "FAILED IDataObject")
+
+   Exit Function
+
+Proc_Error:
+   Debug.Print "Error: " & Err.Number & ". " & Err.Description, App.Title & ".clsShellTree: Function pGetVBDataObjectFromShell"
+   If InIDE Then Stop: Resume
+End Function

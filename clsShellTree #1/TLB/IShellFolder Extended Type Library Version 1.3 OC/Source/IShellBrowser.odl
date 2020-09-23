@@ -1,0 +1,150 @@
+
+//
+// Values for wFlags parameter of ISB::BrowseObject() member.
+//
+typedef enum BO_Flags {
+    SBSP_DEFBROWSER = 0x0000,
+    SBSP_SAMEBROWSER = 0x0001,
+    SBSP_NEWBROWSER = 0x0002,
+
+    SBSP_DEFMODE = 0x0000,
+    SBSP_OPENMODE = 0x0010,
+    SBSP_EXPLOREMODE = 0x0020,
+
+    SBSP_ABSOLUTE = 0x0000,
+    SBSP_RELATIVE = 0x1000,
+    SBSP_PARENT = 0x2000,
+    SBSP_NAVIGATEBACK = 0x4000,
+    SBSP_NAVIGATEFORWARD = 0x8000,
+
+    SBSP_ALLOW_AUTONAVIGATE = 0x10000,
+
+    SBSP_INITIATEDBYHLINKFRAME = 0x80000000,
+    SBSP_REDIRECT = 0x40000000,
+
+    SBSP_WRITENOHISTORY = 0x08000000,
+    SBSP_NOAUTOSELECT = 0x04000000
+} BO_Flags;
+
+typedef enum GCW_IDs {
+    FCW_STATUS      = 0x0001,
+    FCW_TOOLBAR     = 0x0002,
+    FCW_TREE        = 0x0003,
+    FCW_VIEW        = 0x0004,
+    FCW_BROWSER     = 0x0005,
+    FCW_INTERNETBAR = 0x0006,
+    FCW_MENUBAR     = 0x0007,
+    FCW_PROGRESS    = 0x0008,
+    FCW_ADDRESSBAR  = 0x0009,
+    FCW_TOOLBAND    = 0x000a,
+    FCW_LINKSBAR    = 0x000b,
+} GCW_IDs;
+
+//
+// Values for uFlags paremeter of ISB::SetToolbarItems member.
+//
+
+typedef enum STI_Flags {
+    FCT_MERGE 		= 0x0001,
+    FCT_CONFIGABLE 	= 0x0002,
+    FCT_ADDTOEND 	= 0x0004,
+} STI_Flags;
+
+typedef struct OLEMENUGROUPWIDTHS {
+    LONG width[6];
+} OLEMENUGROUPWIDTHS;
+
+typedef struct MSG {
+    long hwnd;
+    long message;
+    long wParam;
+    long lParam;
+    long time;
+    long pt_x;
+    long pt_y;
+} MSG;
+
+
+[
+    uuid(000214E2-0000-0000-C000-000000000046),
+    helpstring("IShellBrowser "),
+    odl
+]
+interface IShellBrowser : IUnknown 		// IOleWindow
+{
+
+    [helpstring("IOleWindow.GetWindow")]
+    HRESULT GetWindow(
+        [in,out] 	  	long *hWnd);
+
+		
+    [helpstring("IOleWindow.ContextSensitiveHelp")]
+    HRESULT ContextSensitiveHelp(
+        [in] 			long fEnterMode);
+
+	
+    HRESULT InsertMenusSB(
+        [in] 			long hmenuShared,
+        [in, out] 		OLEMENUGROUPWIDTHS *lpMenuWidths);
+
+			
+    HRESULT SetMenuSB(
+        [in] 			long hmenuShared,
+        [in] 			long holemenuReserved,
+        [in] 			long hwndActiveObject);
+
+		
+    HRESULT RemoveMenusSB(
+        [in] 			long hmenuShared);
+
+		
+    HRESULT SetStatusTextSB(
+        [in] 			long lpszStatusText);		// LPWSTR lpszStatusText);
+
+
+    HRESULT EnableModelessSB(
+        [in] 			BOOL fEnable);
+
+		
+    HRESULT TranslateAcceleratorSB(
+        [in, out] 		MSG  *lpmsg,
+        [in] 			short wID);
+
+		
+    HRESULT BrowseObject(
+        [in] 			long pidl,
+        [in] 			BO_Flags wFlags);
+
+
+    HRESULT GetViewStateStream(
+        [in] 			long grfMode,
+        [in, out] 		IStream **ppStrm);	// [in,out] 		LPVOID ppvObj); 	// [out, retval] IStream **ppStrm);
+
+	
+    HRESULT GetControlWindow(
+        [in] 			GCW_IDs id,
+        [in,out] 		long *hWnd);
+
+
+    HRESULT SendControlMsg(
+        [in] 			GCW_IDs id,
+        [in] 			long uMsg,
+        [in] 			long wParam,
+        [in] 			long lParam,
+        [in,out] 		long *pret);
+
+			
+    HRESULT QueryActiveShellView(
+        [in,out] 		IShellView **ppshv);
+
+
+    HRESULT OnViewWindowActive(
+        [in] 			IShellView *ppshv);
+
+
+    HRESULT SetToolbarItems(
+        [in] 			long *lpButtons,
+        [in] 			long nButtons,
+        [in] 			STI_Flags uFlags);
+
+}

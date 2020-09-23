@@ -1,0 +1,173 @@
+' Gets the COM IDataObject of the dragged shell item(s) from VB's DataObject.
+' # Alternate:                                                                     #
+' # Edanmo describes getting a weak reference of IDataObject from VB's DataObject. #
+' # http://www.mvps.org/emorcillo/en/code/vb6/getidataobject.shtml                 #
+Private Function pGetIDataObjectFromVB(ByRef Data As DataObject) As Boolean
+
+   If Not (m_IDataObject Is Nothing) Then
+      Debug.Assert False
+      Set m_IDataObject = Nothing
+   End If
+
+   ' try CFSTR_SHELLIDLIST
+   If Not pGetIDOByIDList(Data) Then
+
+      ' try CF_HDROP
+      If Not pGetIDOByHDROP(Data) Then
+
+         ' # try other formats #
+         Debug.Assert False
+      End If
+
+   End If
+
+   pGetIDataObjectFromVB = Not (m_IDataObject Is Nothing)
+
+End Function
+
+' Gets the COM IDataObject of the dragged shell item(s) from VB's DataObject
+' by extracting CFSTR_SHELLIDLIST format. (virtual and filesystem items)
+Private Function pGetIDOByIDList(ByRef Data As DataObject, _
+                                 Optional ByRef isfParent As IShellFolder, _
+                                 Optional ByRef cPidls As Long, _
+                                 Optional ByRef pidlRel As Long _
+                                 ) As Boolean
+   Dim tCIDA         As CIDA
+   Dim b()           As Byte
+   Dim wFormat       As Long
+   Dim hGlobal       As Long
+   Dim pidlFQ        As Long
+   Dim pidlRelIdx    As Long
+   Dim i             As Long
+   Dim DBP           As Integer
+   DBP = 2
+   
+   On Error GoTo Proc_Error
+
+   Debug.Assert m_IDataObject Is Nothing
+
+   wFormat = RegisterClipboardFormat(CFSTR_SHELLIDLIST)
+
+   If Data.GetFormat(LOWORD(wFormat)) Then
+   
+      ' MSDN: Shell Clipboard Formats: CFSTR_SHELLIDLIST
+      '  The data is an STGMEDIUM structure that contains a global memory object.
+      '  The structure's hGlobal member points to a CIDA structure.
+      
+      ' VB reality:
+      '  The returned byte array contains the CIDA struct, where is STGMEDIUM ???
+      '  I guess & hope VB's DataObject handles STGMEDIUM.
+      '  ! DataObject array is one-based !
+      
+      ' CIDA struct members:
+      '  .cidl      as Long == Number of PIDLs that are being transferred, not counting the parent folder
+      '  .aoffset() as Long == An array of offsets, relative to the beginning of this structure. The array contains cidl+1 elements. The first element of aoffset contains an offset to the fully-qualified PIDL of a parent folder. If this PIDL is empty, the parent folder is the desktop. Each of the remaining elements of the array contains an offset to one of the PIDLs to be transferred. All of these PIDLs are relative to the PIDL of the parent folder.
+      ' To use this structure to retrieve a particular PIDL, add the PIDLs aoffset value to the address of the structure.
+      
+      b() = Data.GetData(LOWORD(wFormat))
+
+      ' cast first 4 bytes to long tCIDA.cidl
+      CopyMemory cPidls, b(1), 4&
+      
+      With tCIDA
+         .cidl = cPidls
+         ReDim .aoffset(0 To cPidls)
+         
+         For i = 0 To cPidls
+            ' cast 4 bytes to long tCIDA.aoffset ( b(5) + 3, b(9) + 3, ...)
+            CopyMemory .aoffset(i), b(4 * i + 5), 4&
+         Next
+         
+         ' address of our CIDA
+         hGlobal = VarPtr(b(1))  ' !!! not VarPtr(tCIDA) !!!
+         
+         ' parent's pidl
+         pidlFQ = hGlobal + .aoffset(0)
+         Set isfParent = GetIShellFolder(isfDesktop, pidlFQ, fRtnDesktop:=True)
+         
+         Debug.Assert DbgPrt(DBP >= 1, vbCrLf & "pGetIDOByIDList" & String$(60, "-"))
+         Debug.Assert DbgPrt(DBP >= 1, GetFolderDisplayName(isfDesktop, pidlFQ, SHGDN_FORPARSING))
+         
+         ' create a combined relative pidl of all transfered items
+         For i = 1 To cPidls
+            pidlRelIdx = hGlobal + .aoffset(i)
+            Debug.Assert DbgPrt(DBP >= 2, i, GetFolderDisplayName(isfParent, pidlRelIdx, SHGDN_FORPARSING))
+            pidlRel = CombinePIDLs(pidlRel, pidlRelIdx, fFreePidl1:=True, fFreePidl2:=True)
+         Next
+         
+         Erase b()
+      End With
+      
+      Set m_IDataObject = pIDataObject(m_hOwner, isfParent, cPidls, pidlRel)
+
+      pGetIDOByIDList = Not (m_IDataObject Is Nothing)
+      
+      Debug.Assert DbgPrt(DBP >= 1, "")
+   End If
+
+   Exit Function
+
+Proc_Error:
+   Debug.Print "Error: " & Err.Number & ". " & Err.Description, App.Title & ".clsFolderTree: Function pGetIDataObjectFromVB"
+   If InIDE Then Stop: Resume
+End Function
+
+' Gets the COM IDataObject of the dragged shell item(s) from VB's DataObject
+' by extracting CF_HROP format. (filesystem items only)
+Private Function pGetIDOByHDROP(ByRef Data As DataObject, _
+                                Optional ByRef isfParent As IShellFolder, _
+                                Optional ByRef cPidls As Long, _
+                                Optional ByRef pidlRel As Long _
+                                ) As Boolean
+   Dim wFormat       As Long
+   Dim pidlFQ        As Long
+   Dim pidlRelIdx    As Long
+   Dim idx           As Long
+   Dim DBP           As Integer
+   DBP = 2
+   
+   On Error GoTo Proc_Error
+   
+   Debug.Assert m_IDataObject Is Nothing
+   
+   wFormat = vbCFFiles
+   If Data.GetFormat(wFormat) Then
+      
+      cPidls = Data.Files.Count
+      Debug.Assert cPidls
+      
+      pidlFQ = GetPIDLFromPath(m_hOwner, Data.Files(1))
+      Set isfParent = GetIShellFolderParent(pidlFQ, fRtnDesktop:=True)
+      
+      Debug.Assert DbgPrt(DBP >= 1, vbCrLf & "pGetIDOByHDrop" & String$(60, "-"))
+      Debug.Assert DbgPrt(DBP >= 1, Data.Files(1))
+      
+      pidlRelIdx = GetItemID(pidlFQ, GIID_LAST)
+      FreePIDL pidlFQ
+      
+      pidlRel = pidlRelIdx
+      
+      For idx = 2 To cPidls
+         
+         pidlFQ = GetPIDLFromPath(m_hOwner, Data.Files(idx))
+         pidlRelIdx = GetItemID(pidlFQ, GIID_LAST)
+         FreePIDL pidlFQ
+         
+         pidlRel = CombinePIDLs(pidlRel, pidlRelIdx, fFreePidl1:=True, fFreePidl2:=True)
+         
+         Debug.Assert DbgPrt(DBP >= 2, Data.Files(idx))
+      Next
+      
+      Set m_IDataObject = pIDataObject(m_hOwner, isfParent, cPidls, pidlRel)
+      
+      pGetIDOByHDROP = Not (m_IDataObject Is Nothing)
+      
+      Debug.Assert DbgPrt(DBP >= 1, "")
+   End If
+   
+   Exit Function
+
+Proc_Error:
+   Debug.Print "Error: " & Err.Number & ". " & Err.Description, App.Title & ".clsFolderTree: Function pGetIDOByHDrop"
+   If InIDE Then Stop: Resume
+End Function

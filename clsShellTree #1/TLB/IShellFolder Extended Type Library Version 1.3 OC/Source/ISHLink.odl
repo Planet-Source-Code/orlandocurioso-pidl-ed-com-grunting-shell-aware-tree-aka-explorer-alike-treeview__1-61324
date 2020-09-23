@@ -1,0 +1,229 @@
+//=============================================================
+// VBBox CodeBox Framework [vbbox.com/vb/codebox/]
+// Copyright (c) 1997-2003 Klaus H. Probst [kprobst@vbbox.com]
+//=============================================================
+
+// IShellLink / IPersistFile
+
+    typedef struct FILETIME
+    {
+      long  dwLowDateTime;
+      long  dwHighDateTime;
+
+    } FILETIME;
+
+    typedef struct WIN32_FIND_DATA
+    {
+      long      dwFileAttributes;
+      FILETIME  ftCreationTime;
+      FILETIME  ftLastAccessTime;
+      FILETIME  ftLastWriteTime;
+      long      nFileSizeHigh;
+      long      nFileSizeLow;
+      long      dwReserved0;
+      long      dwReserved1;
+      TCHAR     cFileName[MAX_PATH];
+      TCHAR     cAlternate[14];
+
+    } WIN32_FIND_DATA;
+
+
+	// The same ShowWindow() flags from the SDK
+	typedef enum {
+
+		SW_HIDE             = 0,
+		SW_SHOWNORMAL       = 1,
+		SW_NORMAL           = 1,
+		SW_SHOWMINIMIZED    = 2,
+		SW_SHOWMAXIMIZED    = 3,
+		SW_MAXIMIZE         = 3,
+		SW_SHOWNOACTIVATE   = 4,
+		SW_SHOW             = 5,
+		SW_MINIMIZE         = 6,
+		SW_SHOWMINNOACTIVE  = 7,
+		SW_SHOWNA           = 8,
+		SW_RESTORE          = 9,
+		SW_SHOWDEFAULT      = 10,
+		SW_FORCEMINIMIZE    = 11,
+		SW_MAX              = 11,
+
+	} SL_SHOWFLAGS;
+
+	typedef enum {
+
+		STGM_DIRECT 			= 0x0,
+		STGM_TRANSACTED 		= 0x10000,
+		STGM_SIMPLE 			= 0x8000000,
+		STGM_READ 				= 0x0,
+		STGM_WRITE 				= 0x1,
+		STGM_READWRITE 			= 0x2,
+		STGM_SHARE_DENY_NONE 	= 0x40,
+		STGM_SHARE_DENY_READ 	= 0x30,
+		STGM_SHARE_DENY_WRITE 	= 0x20,
+		STGM_SHARE_EXCLUSIVE 	= 0x10,
+		STGM_PRIORITY 			= 0x40000,
+		STGM_DELETEONRELEASE 	= 0x4000000,
+		STGM_CREATE 			= 0x1000,
+		STGM_CONVERT 			= 0x20000,
+		STGM_FAILIFTHERE 		= 0x0,
+		STGM_NOSCRATCH 			= 0x100000,
+
+	} STGM;
+
+	// IShellLink::Resolve fFlags
+	typedef enum {
+
+		SLR_NO_UI           = 0x0001,   // don't post any UI during the resolve operation
+		SLR_ANY_MATCH       = 0x0002,   // no longer used
+		SLR_UPDATE          = 0x0004,   // save the link back to it's file if the track made it dirty
+		SLR_NOUPDATE        = 0x0008,
+		SLR_NOSEARCH        = 0x0010,   // don't execute the search heuristics
+		SLR_NOTRACK         = 0x0020,   // don't use NT5 object ID to track the link
+		SLR_NOLINKINFO      = 0x0040,   // don't use the net and volume relative info
+		SLR_INVOKE_MSI      = 0x0080,   // if we have a darwin link, then call msi to fault in the applicaion
+
+	} SLR_FLAGS;
+
+	// IShellLink::GetPath fFlags
+	typedef enum {
+
+		SLGP_SHORTPATH      = 0x0001,
+		SLGP_UNCPRIORITY    = 0x0002,
+		SLGP_RAWPATH        = 0x0004,
+
+	} SLGP_FLAGS;
+
+    //==========================================================================
+    [
+        uuid(0000010b-0000-0000-C000-000000000046),
+        helpstring("IPersistFile Interface"),
+        odl
+    ]
+    //==========================================================================
+    interface IPersistFile : IUnknown
+    //==========================================================================
+    {
+        [helpstring("Retrieves the file Class ID")]
+        HRESULT GetClassID (
+                        [in,out] long  *ClassID);
+
+        [helpstring("Returns whether or not the file has changed")]
+        HRESULT IsDirty ([out,retval] long* fDirty);
+
+        [helpstring("Load the specified file")]
+        HRESULT Load (
+                        [in]     LPSTR  FileName,
+                        [in]     STGM   dwMode);
+
+        [helpstring("Saves the file to the specified path")]
+        HRESULT Save (
+                        [in]     LPSTR  FileName,
+                        [in]     long   Remember);
+
+        [helpstring("Returns whether or not a save operation on the specified file has completed")]
+        HRESULT SaveCompleted (
+                        [in]     LPSTR  FileName);
+
+        [helpstring("Retrieves the path to the currently loaded file")]
+        HRESULT GetCurFile (
+                        [in,out] LPSTR *FileName);
+    }
+    
+    //==========================================================================
+    [
+    	uuid(000214EE-0000-0000-C000-000000000046),
+        helpstring("IShellLink Interface (ANSI)"),
+        odl
+    ]
+
+    interface IShellLink:IUnknown
+    {
+        [helpstring("Retrieves the link's executable or document target path")]
+        HRESULT GetPath(
+                        [in,out]	LPSTR           FileName,
+                        [in]     	long            BufferSize,
+                        [in,out] 	WIN32_FIND_DATA *uw32fd,
+                        [in]     	long      	Flags);
+
+        [helpstring("Retrieves the link's PIDL")]
+        HRESULT GetIDList(
+                        [in,out] 	long  *ppidl);
+
+
+        [helpstring("Sets the link's PIDL")]
+        HRESULT SetIDList(
+                        [in]     	long   pidl);
+
+
+        [helpstring("Retrieves the link's description")]
+        HRESULT GetDescription(
+                        [in,out]  	LPSTR  Description,
+                        [in]      	long   BufferSize);
+
+
+        [helpstring("Set's the link's description")]
+        HRESULT SetDescription(
+                        [in]      	LPSTR  Description);
+
+
+        [helpstring("Retrieves the link's working (startup) directory")]
+        HRESULT GetWorkingDirectory(
+                        [in,out]  	LPSTR  Directory,
+                        [in]      	long   BufferSize);
+
+        [helpstring("Sets the link's working (startup) directory")]
+        HRESULT SetWorkingDirectory(
+                        [in]      	LPSTR    Directory);
+
+        [helpstring("Retrieves the link's arguments")]
+        HRESULT GetArguments(
+                        [in,out]  	LPSTR    Arguments,
+                        [in]      	long     BufferSize);
+
+        [helpstring("Sets the link's arguments")]
+        HRESULT SetArguments(
+                        [in]      	LPSTR    Arguments);
+
+        [helpstring("Retrieves the link's hotkey combination")]
+        HRESULT GetHotkey(
+                        [in,out]  	long     *Hotkey);
+
+        [helpstring("Sets the link's hotkey combination")]
+        HRESULT SetHotkey(
+                        [in]      	long     Hotkey);
+
+        [helpstring("Retrieves the link's show command")]
+        HRESULT GetShowCmd(
+                        [in,out]  	long     *ShowCmd);
+
+        [helpstring("Sets the link's show command")]
+        HRESULT SetShowCmd(
+                        [in]      	long 	ShowCmd);
+
+        [helpstring("Retrieves the path to the link's icon")]
+        HRESULT GetIconLocation(
+                        [in, out] 	LPSTR    IconPath,
+                        [in]      	long     BufferSize,
+                        [in,out]  	long    *IconIndex);
+
+        [helpstring("Sets the path to the link's icon")]
+        HRESULT SetIconLocation(
+                        [in]      	LPSTR    IconPath,
+                        [in]      	long     IconIndex);
+
+        [helpstring("Sets the link's relative path")]
+        HRESULT SetRelativePath(
+                        [in]      	LPSTR    RelativePath,
+                        [in]      	long     Reserved);
+
+        [helpstring("Resolves the link")]
+        HRESULT Resolve(
+                        [in]      	long     hWnd,
+                        [in]      	long     Flags);
+
+        [helpstring("Sets the link's executable or document target path")]
+        HRESULT SetPath(
+                        [in]     	LPSTR    FileName);
+
+
+    }

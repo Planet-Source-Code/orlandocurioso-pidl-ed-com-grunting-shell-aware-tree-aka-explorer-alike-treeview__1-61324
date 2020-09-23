@@ -1,0 +1,210 @@
+// IDataObject.odl
+// all interface methods return HRESULT. Exchanged for long to use return when calling from VB.
+// -> interfaces can't be implemented in VB, just for calling purposes!
+
+    typedef enum {
+        DVASPECT_CONTENT    = 1,
+        DVASPECT_THUMBNAIL  = 2,
+        DVASPECT_ICON       = 4,
+        DVASPECT_DOCPRINT   = 8
+    } DVASPECT;
+    
+    typedef enum {
+        TYMED_HGLOBAL     = 1,
+        TYMED_FILE        = 2,
+        TYMED_ISTREAM     = 4,
+        TYMED_ISTORAGE    = 8,
+        TYMED_GDI         = 16,
+        TYMED_MFPICT      = 32,
+        TYMED_ENHMF       = 64,
+        TYMED_NULL        = 0
+    } TYMED;
+
+    typedef struct {
+        long     cfFormat;
+        long     ptd;
+        DVASPECT dwAspect;
+        long     lindex;
+        TYMED    tymed;
+    } FORMATETC;
+
+    // This is really a union
+    // This is a generic definition
+    typedef struct {
+        TYMED    tymed;
+        long     pData;
+        IUnknown *pUnkForRelease;
+    } STGMEDIUM;
+
+    typedef struct {
+        long 			cidl;
+        SAFEARRAY(long) aoffset;
+    } CIDA;
+
+
+    //----------------------------------------------------------
+    // IEnumFORMATETC
+    //----------------------------------------------------------
+    [
+        uuid(00000103-0000-0000-C000-000000000046),
+        helpstring("IEnumFORMATETC Interface"),
+        odl
+    ]
+    interface IEnumFORMATETC : IUnknown
+    {
+        long Next([in] ULONG celt,
+                  [in, out] FORMATETC *rgelt,
+                  [in, out] ULONG *pceltFetched);
+        long Skip([in] ULONG celt);
+        long Reset();
+        long Clone([in, out] IEnumFORMATETC **ppenum);
+    }
+
+
+    //---------------------------------------------------------
+    // IDataObject
+    //---------------------------------------------------------
+    typedef enum {
+        DV_E_FORMATETC             = 0x80040064,
+        DV_E_DVTARGETDEVICE        = 0x80040065,
+        DV_E_STGMEDIUM             = 0x80040066,
+        DV_E_STATDATA              = 0x80040067,
+        DV_E_LINDEX                = 0x80040068,
+        DV_E_TYMED                 = 0x80040069,
+        DV_E_CLIPFORMAT            = 0x8004006A,
+        DV_E_DVASPECT              = 0x8004006B,
+        DV_E_DVTARGETDEVICE_SIZE   = 0x8004006C,
+        DV_E_NOIVIEWOBJECT         = 0x8004006D
+    } DV_ERROR;
+
+    typedef enum tagDATADIR
+    {
+        DATADIR_GET = 1,
+        DATADIR_SET = 2
+    } DATADIR;
+
+
+    [
+        uuid(0000010e-0000-0000-C000-000000000046),
+        helpstring("IDataObject Interface"),
+        odl
+    ]
+    interface IDataObject : IUnknown
+    {
+        long GetData(
+                       [in] FORMATETC *pformatetcIn,
+                       [in,out] STGMEDIUM *pmedium);
+
+        long GetDataHere(
+                       [in] FORMATETC *pformatetc,
+                       [in,out] STGMEDIUM *pmedium);
+
+        long QueryGetData(
+                       [in] FORMATETC *pformatetc);
+
+        long GetCanonicalFormatEtc(
+                       [in] FORMATETC *pformatectIn,
+                       [in,out] FORMATETC *pformatetcOut);
+
+        long SetData(
+                       [in] FORMATETC *pformatetc,
+                       [in] STGMEDIUM *pmedium,
+                       [in] BOOL fRelease);
+
+        long EnumFormatEtc(
+                       [in]     DATADIR dwDirection,
+                       [in,out] IEnumFORMATETC **ppenumFormatEtc);
+
+        long DAdvise(
+                       [in] FORMATETC *pformatetc,
+                       [in] long advf,
+                       [in] long pAdvSink,
+                       [in] long pdwConnection);
+
+        long DUnadvise(
+                       [in] long dwConnection);
+
+        long EnumDAdvise(
+                       [in] long ppenumAdvise);
+    }
+
+    //---------------------------------------------------------
+    // IDropSource
+    //---------------------------------------------------------
+
+    [
+        uuid(00000121-0000-0000-C000-000000000046),
+        helpstring("IDropSource Interface"),
+        odl
+    ]
+    interface IDropSource : IUnknown
+    {
+
+        typedef IDropSource *LPDROPSOURCE;
+
+        HRESULT QueryContinueDrag
+        (
+            [in] BOOL      fEscapePressed,
+            [in] KEYSTATES grfKeyState
+        );
+                
+        HRESULT GiveFeedback
+        (
+            [in] DWORD dwEffect
+        );
+        
+    }
+
+
+
+    //---------------------------------------------------------
+    // IDropTarget
+    //---------------------------------------------------------
+
+    typedef enum {
+        DROPEFFECT_NONE = 0,
+        DROPEFFECT_COPY = 1,
+        DROPEFFECT_MOVE = 2,
+        DROPEFFECT_LINK = 4,
+        DROPEFFECT_SCROLL = 0x80000000
+    } DROPEFFECT;
+    
+    [
+        uuid(00000122-0000-0000-C000-000000000046),
+        helpstring("IDropTarget Interface"),
+        odl
+    ]
+    interface IDropTarget : IUnknown
+    {
+
+        typedef IDropTarget *LPDROPTARGET;
+
+
+        long DragEnter
+        (
+            [in] IDataObject *pDataObj,
+            [in] KEYSTATES   grfKeyState,
+        	[in] LONG 		 ptX,
+        	[in] LONG        ptY,
+            [in, out] DROPEFFECT *pdwEffect
+        );
+
+        long DragOver
+        (
+            [in] KEYSTATES   grfKeyState,
+        	[in] LONG 		 ptX,
+        	[in] LONG        ptY,
+            [in, out] DROPEFFECT *pdwEffect
+        );
+
+        long DragLeave(void);
+
+        long Drop
+        (
+            [in] IDataObject *pDataObj,
+            [in] KEYSTATES   grfKeyState,
+        	[in] LONG 		 ptX,
+        	[in] LONG        ptY,
+            [in, out] DROPEFFECT *pdwEffect
+        );
+    }

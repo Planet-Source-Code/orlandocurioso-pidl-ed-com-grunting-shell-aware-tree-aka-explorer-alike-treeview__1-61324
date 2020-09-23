@@ -1,0 +1,153 @@
+
+// Signed typelib definitions
+// Some of these were borrowed from Bruce McKinney's 
+// Hardcore VB 2 windef.idl
+// Except where noted, all lowercase names are typelib intrinsic 
+// data types and all uppercase names are alias names.
+
+typedef short           WORD;
+typedef short           USHORT;
+typedef long            DWORD;
+typedef long            ULONG;
+typedef long            UINT;
+typedef unsigned char   BYTE;   // BYTE is unsigned under VB
+typedef long            BOOL;
+typedef long            LONG;
+
+typedef Currency        ULARGE_INTEGER;
+
+typedef long            HANDLE;
+typedef long            HWND;
+typedef long            HMENU;
+typedef long            HINSTANCE;
+typedef long            HDC;
+typedef long            HFILE;
+typedef long            HGDIOBJ;
+typedef long            HBITMAP;
+typedef long            HICON;
+typedef long            HCURSOR;
+typedef long            HDWP;
+typedef long            HKEY;
+typedef long            HPEN;
+typedef long            HBRUSH;
+typedef long            HPALETTE;
+typedef long            HMETAFILE;
+typedef long            HENHMETAFILE;
+typedef long            HRGN;
+typedef long            HMODULE;
+typedef long            HTASK;
+typedef long            HGLOBAL;
+typedef long            HRSRC;
+typedef long            HIMAGELIST;
+typedef long            REGSAM;
+typedef long            WNDPROC;
+typedef float           FLOAT;
+typedef double          DOUBLE;
+typedef void            *LPVOID;
+typedef void            *LPCVOID;
+
+typedef DWORD           COLORREF;
+typedef UINT            WPARAM;
+typedef long            LPARAM;
+typedef long            LRESULT;
+typedef long            *LPBYTE;    // v1.2
+
+typedef LPSTR           LPCSTR;     // LPSTR is native
+typedef LPSTR           LPOLESTR;
+typedef LPWSTR          LPCWSTR;    // LPWSTR is native
+typedef char            CHAR;
+typedef wchar_t         WCHAR;
+typedef WCHAR           OLECHAR;
+typedef LONG            DISPID;     // v1.2
+
+#ifdef UNICODE 
+typedef LPWSTR          LPTSTR;
+typedef LPWSTR          LPCTSTR;
+typedef WCHAR           TCHAR;
+#else
+typedef LPSTR           LPTSTR;
+typedef LPSTR           LPCTSTR;
+typedef BYTE            TCHAR;
+#endif
+typedef LPCSTR          LPCOLESTR;
+
+typedef long            CALLBACK;
+
+#define MAX_PATH        260
+#define WINAPI          __stdcall
+#define void            VOID
+#define VOID 		    void			// MIDL compiler MSDN: Differences Between MIDL and MkTypLib
+#define UNALIGNED       // equals nothing...
+
+
+typedef struct GUID     // 16 bytes
+{          
+    DWORD   Data1;
+    WORD    Data2;
+    WORD    Data3;
+    BYTE    Data4[8];   // chars are one-based
+} GUID;
+typedef	GUID      *REFGUID;
+
+typedef	GUID             IID;
+typedef	GUID             *REFIID;
+typedef	GUID             CLSID;
+typedef	GUID             *REFCLSID;
+typedef	GUID             UUID;
+
+/*
+
+typedef struct IID
+{          
+    DWORD   Data1;
+    WORD    Data2;
+    WORD    Data3;
+    BYTE    Data4[8];
+} IID;
+typedef	IID      *REFIID;
+
+typedef struct CLSID
+{          
+    DWORD   Data1;
+    WORD    Data2;
+    WORD    Data3;
+    BYTE    Data4[8];
+} CLSID;
+typedef	CLSID    *REFCLSID;
+
+typedef struct UUID
+{          
+    DWORD   Data1;
+    WORD    Data2;
+    WORD    Data3;
+    BYTE    Data4[8];
+} UUID;
+
+*/
+
+
+
+/*
+	typedef struct POINTAPI
+  	{
+    	long x;
+    	long y;
+  	} POINTAPI;
+
+	typedef	POINTAPI    POINT;
+	
+  	typedef struct SIZEAPI
+  	{
+    	long cx;
+    	long cy;
+  	} SIZEAPI;
+  	
+  	typedef SIZEAPI		SIZE;
+  	
+*/
+
+  	typedef struct SIZE
+  	{
+    	long cx;
+    	long cy;
+  	} SIZE;

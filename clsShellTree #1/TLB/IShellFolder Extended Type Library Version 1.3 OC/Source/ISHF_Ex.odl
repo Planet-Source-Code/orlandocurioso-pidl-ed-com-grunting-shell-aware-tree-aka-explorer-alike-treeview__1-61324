@@ -1,0 +1,61 @@
+// all of the definitions have not been tested and may
+// need some correction. as well param & rtn vals may
+// need to be tweeked to suit your needs. btm
+
+// OrlandoCurioso version 1.3 changes to Brad Martinez version 1.2
+// 
+// ISHF_Ex.odl
+// -- new guid for 1.3  {ED4FBFAD-D6D4-4d36-AEE6-4DC6D8C007BC}
+// -- #include ISHBrowser.odl,ISHFoldr2.odl,CSIDL.odl,ISHLink.odl,IDataObject.odl,IDropHelper.odl,Misc.odl
+//
+// ISHFoldr.odl
+// -- ESHCONTF members added
+// -- ESHGNO   members added
+// -- ESFGAO   members added  !!!  SFGAO_HIDDEN replaces old SFGAO_GHOSTED, new SFGAO_GHOSTED has different value !!!
+//
+//
+// ICtxMenu.odl
+// -- eCMF     			members added
+// -- eCMIC_MASK 		members added
+// -- StringConstants
+// -- CMINVOKECOMMANDINFOEX	changed string declares to use struct with VB
+//
+//
+// WinTypes.odl
+// -- #define VOID 		void			// MIDL compiler MSDN: Differences Between MIDL and MkTypLib
+//
+// CSIDL.odl, ISHLink.odl, IDataObject.odl, IDropHelper.odl, Misc.odl, ISHFoldr2.odl, IExtractIcon.odl
+// -- added
+//
+//
+//=================================================================
+[
+    uuid(ED4FBFAD-D6D4-4d36-AEE6-4DC6D8C007BC),
+    helpstring("IShellFolder Extended Type Library v1.3 OC"),
+    version(1.3) 
+]
+//=================================================================
+
+library IShellFolderEx_TLB
+{
+    importlib("stdole2.tlb");
+
+    #include "Wintypes.odl"
+    #include "Misc.odl"
+    #include "ISHTypes.odl"
+    #include "IUnknown.odl" 
+    #include "IMalloc.odl"
+    #include "IEnumIDL.odl"
+    #include "ICtxMenu.odl"
+    #include "ISHView.odl"   // v 1.1, rev 2
+    #include "ISHFoldr.odl"
+    #include "ISHFoldr2.odl"
+    #include "CSIDL.odl"
+    #include "ISHLink.odl"
+    #include "IDataObject.odl"
+    #include "IDropHelper.odl"
+    #include "IStream.odl"
+    #include "IExtractIcon.odl"
+//    #Include "ISHBrowser.odl"			// strange M0001 error: can't preprocess input for any file named ~ ISHBrowser.odl
+    #include "IShellBrowser.odl"     
+}
