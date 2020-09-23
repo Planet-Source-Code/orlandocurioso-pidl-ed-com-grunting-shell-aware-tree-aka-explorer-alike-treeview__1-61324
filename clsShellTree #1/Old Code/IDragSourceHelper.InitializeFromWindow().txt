@@ -1,0 +1,89 @@
+IDragSourceHelper.InitializeFromWindow() works only with OLEDragMode = drgAutomatic.
+SysTree32 >= 5.00 handles WM_GETDRAGIMAGE natively.
+
+
+clsShellTree: *******************************************************************************************
+
+Private Sub m_ucTree_OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+
+	...
+	
+      Dim idsh As IDragSourceHelper
+      Dim tP   As POINTAPI
+      
+      Set idsh = CreateIDragSourceHelper()
+      If Not (idsh Is Nothing) Then
+         ' # fails with Unknown error, if ucTree.OLEDragMode <> drgAutomatic #
+         tP.X = -16: tP.Y = 0
+         hr = idsh.InitializeFromWindow(m_ucTree.hWnd, VarPtr(tP), m_IDataObject)
+'         Debug.Assert hr = S_OK
+         Set idsh = Nothing
+      End If
+
+	...
+	
+End Sub
+
+
+
+
+ucTreeView: *************************************************************************************************
+
+#If FLDBR Then
+	...
+	
+Private Declare Function RegisterWindowMessageA Lib "user32" (ByVal lpString As String) As Long
+
+Private Const DI_GETDRAGIMAGE As String = "ShellGetDragImage"
+Private WM_GETDRAGIMAGE As Long
+#End If
+
+
+
+Public Function Initialize() As Boolean
+
+	...
+	
+#If FLDBR Then
+
+	...
+
+#If DDIMG = 0 Then
+            WM_GETDRAGIMAGE = RegisterWindowMessageA(DI_GETDRAGIMAGE)
+            Call Subclass_AddMsg(m_hTreeView, WM_GETDRAGIMAGE, MSG_BEFORE)
+#End If
+#End If  ' FLDBR
+
+	...
+	
+End Function
+
+
+Public Sub zSubclass_Proc()
+	
+	...
+	
+#If FLDBR Then
+			
+			...
+			
+            Case WM_GETDRAGIMAGE
+               ' Calling IDragSourceHelper.InitializeFromWindow() sends this message
+               ' fails with Unknown error, if OLEDragMode <> drgAutomatic
+               Dim tSHDI   As SHDRAGIMAGE
+               
+               bHandled = True
+
+               With tSHDI
+                  .hbmpDragImage = DragImageCreate(SelectedNode, .xOffset, .yOffset, _
+                                                   .wDragImage, .hDragImage, .crColorKey)
+               End With
+
+               Call CopyMemory(ByVal lParam, tSHDI, Len(tSHDI))
+               
+#End If  ' FLDBR
+            
+         End Select  ' uMsg TreeView
+
+   End Select ' lng_hWnd
+End Sub

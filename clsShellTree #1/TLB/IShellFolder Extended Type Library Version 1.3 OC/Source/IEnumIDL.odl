@@ -1,0 +1,23 @@
+
+//=============================================================
+// IID_IEnumIDList
+[
+    uuid(000214F2-0000-0000-C000-000000000046),
+    helpstring("IEnumIDList Interface"),
+    odl
+]
+//=============================================================
+
+interface IEnumIDList : IUnknown
+{
+    // *** IEnumIDList methods ***
+    long    Next(
+                [in]     ULONG         celt,
+                [in,out] LPITEMIDLIST  *rgelt,
+                [in,out] ULONG         *pceltFetched);
+    HRESULT Skip([in] ULONG celt);                     // E_NOTIMPL
+    HRESULT Reset();                                   // E_NOTIMPL
+    HRESULT Clone([in,out] IEnumIDList **ppenum);      // E_NOTIMPL
+}
+
+typedef IEnumIDList *LPENUMIDLIST;

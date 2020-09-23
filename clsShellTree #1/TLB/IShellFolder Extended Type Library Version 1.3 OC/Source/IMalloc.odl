@@ -1,0 +1,32 @@
+
+//=============================================================
+// Component Object Interface (from VC42\Include\Objidl.idl)
+[
+    uuid(00000002-0000-0000-C000-000000000046),
+    helpstring("IMalloc Interface"),
+    odl
+]
+
+//=============================================================
+interface IMalloc : IUnknown
+{
+    // *** IMalloc methods ***
+    [helpstring("Returns a pointer to the allocated memory block")]
+    long   Alloc(   [in] ULONG cb);
+
+    [helpstring("Returns a pointer to a reallocated memory block")]
+    long   Realloc( [in] void  *pv, 
+                    [in] ULONG cb);
+
+    [helpstring("Frees a previously allocated block of memory")]
+    void  Free(     [in] void *pv);    
+
+    [helpstring("Returns the size (in bytes) of an allocated memory block")]
+    ULONG GetSize(  [in] void *pv);
+
+    [helpstring("Determines if this allocator was used to allocate the specified block of memory")]
+    int   DidAlloc( [in] void *pv);
+
+    [helpstring("Minimizes the heap as much as possible by releasing unused memory to the operating system")]
+    void  HeapMinimize();
+}

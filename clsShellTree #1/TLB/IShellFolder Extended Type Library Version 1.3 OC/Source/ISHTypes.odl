@@ -1,0 +1,59 @@
+
+//=============================================================
+// SHITEMID -- Item ID
+
+typedef struct SHITEMID         // mkid
+{
+    USHORT      cb;         // Size of the ID (including cb itself)
+    BYTE        abID[1];    // The item ID (variable length)
+} SHITEMID;
+
+typedef UNALIGNED SHITEMID *LPSHITEMID;
+typedef UNALIGNED SHITEMID *LPCSHITEMID;
+
+
+//=============================================================
+// ITEMIDLIST -- List if item IDs (combined with 0-terminator)
+
+typedef struct ITEMIDLIST       // idl
+{
+    SHITEMID    mkid;
+} ITEMIDLIST;
+
+// typedef UNALIGNED ITEMIDLIST * LPITEMIDLIST;
+// typedef const UNALIGNED ITEMIDLIST * LPCITEMIDLIST;
+typedef LONG LPITEMIDLIST;
+typedef LONG LPCITEMIDLIST;
+
+
+//=============================================================
+// struct STRRET
+// structure for returning strings from IShellFolder member functions
+// (turned into enum so that the constants and their 
+//  values are accessable outside the typelib)
+
+typedef enum tagESTRRET
+{
+    STRRET_WSTR   = 0x0000,         // Use STRRET.pOleStr
+    STRRET_OFFSET = 0x0001,         // Use STRRET.uOffset to Ansi
+    STRRET_CSTR   = 0x0002,         // Use STRRET.cStr
+} ESTRRET;
+
+typedef struct STRRET
+{
+    ESTRRET uType;      // One of the STRRET_* values
+    BYTE cStr[260];     // buffer to rcv largest member of the union
+
+/*  vb doesn't like unions (a cross btw an enum & struct?)
+    union
+    {
+        LPWSTR          pOleStr;        // OLESTR that will be freed
+        LPSTR           pStr;           // ANSI string that will be freed (needed?)
+        UINT            uOffset;        // Offset into SHITEMID
+        char            cStr[260];      // Buffer to fill in (ANSI)
+    } DUMMYUNIONNAME;
+*/
+} STRRET;
+
+typedef STRRET *LPSTRRET;
+

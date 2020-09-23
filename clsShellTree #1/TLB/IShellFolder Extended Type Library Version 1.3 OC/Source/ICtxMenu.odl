@@ -1,0 +1,206 @@
+
+// QueryContextMenu uFlags
+typedef enum _eCMF {
+    CMF_NORMAL          = 0x00000000,
+    CMF_DEFAULTONLY     = 0x00000001,
+    CMF_VERBSONLY       = 0x00000002,
+    CMF_EXPLORE         = 0x00000004,
+    CMF_NOVERBS         = 0x00000008,
+    CMF_CANRENAME       = 0x00000010,
+    CMF_NODEFAULT       = 0x00000020,
+    CMF_INCLUDESTATIC   = 0x00000040,
+    CMF_FINDHACK        = 0x00000080,
+    CMF_EXTENDEDVERBS   = 0x00000100,      // rarely used verbs    
+    CMF_RESERVED        = 0xffff0000,      // View specific
+} eCMF;
+
+
+// GetCommandString uFlags
+typedef enum _eGCS {
+#ifdef UNICODE
+    GCS_VERB            = 0x00000004,     // canonical verb (unicode)
+    GCS_HELPTEXT        = 0x00000005,     // help text (unicode version)
+    GCS_VALIDATE        = 0x00000006,     // validate command exists (unicode)
+#else
+    GCS_VERB            = 0x00000000,     // canonical verb
+    GCS_HELPTEXT        = 0x00000001,     // help text (for status bar)
+    GCS_VALIDATE        = 0x00000002,     // validate command exists
+#endif
+    GCS_UNICODE         = 0x00000004,     // for bit testing - Unicode string
+} eGCS;
+
+
+// CMINVOKECOMMANDINFO(EX) lpVerb 
+  #define  tlbCMDSTR_NEWFOLDERA       "NewFolder"
+  #define  tlbCMDSTR_VIEWLISTA        "ViewList"
+  #define  tlbCMDSTR_VIEWDETAILSA     "ViewDetails"
+  #define  tlbCMDSTR_NEWFOLDERW       L"NewFolder"
+  #define  tlbCMDSTR_VIEWLISTW        L"ViewList"
+  #define  tlbCMDSTR_VIEWDETAILSW     L"ViewDetails"
+
+#ifdef UNICODE
+  #define  tlbCMDSTR_NEWFOLDER        tlbCMDSTR_NEWFOLDERW
+  #define  tlbCMDSTR_VIEWLIST         tlbCMDSTR_VIEWLISTW
+  #define  tlbCMDSTR_VIEWDETAILS      tlbCMDSTR_VIEWDETAILSW
+#else
+  #define  tlbCMDSTR_NEWFOLDER        tlbCMDSTR_NEWFOLDERA
+  #define  tlbCMDSTR_VIEWLIST         tlbCMDSTR_VIEWLISTA
+  #define  tlbCMDSTR_VIEWDETAILS      tlbCMDSTR_VIEWDETAILSA
+#endif
+
+[dllname("bogus")]
+module StringConstants
+{
+#ifdef UNICODE
+    const LPWSTR CMDSTR_NEWFOLDERW  	= tlbCMDSTR_NEWFOLDERW;
+    const LPWSTR CMDSTR_VIEWLISTW  	= tlbCMDSTR_VIEWLISTW;
+    const LPWSTR CMDSTR_VIEWDETAILSW    = tlbCMDSTR_VIEWDETAILSW;
+#else
+    const LPSTR  CMDSTR_NEWFOLDERA  	= tlbCMDSTR_NEWFOLDERA;
+    const LPSTR  CMDSTR_VIEWLISTA  	= tlbCMDSTR_VIEWLISTA;
+    const LPSTR  CMDSTR_VIEWDETAILSA  	= tlbCMDSTR_VIEWDETAILSA;
+#endif
+};
+
+
+// CMINVOKECOMMANDINFO(EX) fMask 
+typedef enum _eCMIC_MASK {
+    CMIC_MASK_HOTKEY        	= 0x00000020,   // SEE_MASK_HOTKEY
+    CMIC_MASK_ICON          	= 0x00000010,   // SEE_MASK_ICON
+    CMIC_MASK_FLAG_NO_UI    	= 0x00000400,   // SEE_MASK_FLAG_NO_UI
+    CMIC_MASK_UNICODE       	= 0x00004000,   // SEE_MASK_UNICODE
+    CMIC_MASK_NO_CONSOLE    	= 0x00008000,   // SEE_MASK_NO_CONSOLE
+//    CMIC_MASK_HASLINKNAME   	= 0x0000000?, // SEE_MASK_HASLINKNAME
+//    CMIC_MASK_FLAG_SEP_VDM  	= 0x0000000?, // SEE_MASK_FLAG_SEPVDM
+//    CMIC_MASK_HASTITLE      	= 0x0000000?, // SEE_MASK_HASTITLE
+    CMIC_MASK_ASYNCOK       	= 0x00100000,   // SEE_MASK_ASYNCOK
+    
+#if (_WIN32_IE >= 0x0400)
+    CMIC_MASK_PTINVOKE          = 0x20000000,   //
+#endif
+#if (_WIN32_IE >= 0x0501)
+    CMIC_MASK_SHIFT_DOWN    	= 0x10000000,   //
+    CMIC_MASK_CONTROL_DOWN  	= 0x40000000,   //
+#endif
+#if (_WIN32_IE >= 0x0560)
+    CMIC_MASK_FLAG_LOG_USAGE    = 0x04000000,   // SEE_MASK_FLAG_LOG_USAGE
+    CMIC_MASK_NOZONECHECKS  	= 0x00800000,   // SEE_MASK_NOZONECHECKS
+#endif 
+    
+} eCMIC_MASK;
+
+
+typedef struct _CMINVOKECOMMANDINFO {
+    DWORD cbSize;           // sizeof(CMINVOKECOMMANDINFO)
+    DWORD fMask;            // any combination of CMIC_MASK_*
+    HWND  hwnd;             // might be NULL (indicating no owner window)
+    long  lpVerb;           // LPCSTR, either a string or MAKEINTRESOURCE(idOffset)
+    long  lpParameters;     // LPCSTR, might be NULL (indicating no parameter)
+    long  lpDirectory;      // LPCSTR, might be NULL (indicating no specific directory)
+    int   nShow;            // one of SW_ values for ShowWindow() API
+
+    DWORD dwHotKey;
+    HANDLE hIcon;
+} CMINVOKECOMMANDINFO;
+typedef CMINVOKECOMMANDINFO *LPCMINVOKECOMMANDINFO;
+
+
+typedef struct _CMInvokeCommandInfoEx {
+    DWORD cbSize;           // sizeof(CMINVOKECOMMANDINFO)
+    DWORD fMask;            // any combination of CMIC_MASK_*
+    HWND  hwnd;             // might be NULL (indicating no owner window)
+    long  lpVerb;           // LPCSTR, either a string or MAKEINTRESOURCE(idOffset)
+    long  lpParameters;     // LPCSTR, might be NULL (indicating no parameter)
+    long  lpDirectory;      // LPCSTR, might be NULL (indicating no specific directory)
+    int   nShow;            // one of SW_ values for ShowWindow() API
+
+    DWORD   dwHotKey;
+    HANDLE  hIcon;
+    long    lpTitle;        // LPCSTR, For CreateProcess-StartupInfo.lpTitle
+    long    lpVerbW;        // LPCWSTR, Unicode verb (for those who can use it)
+    long    lpParametersW;  // LPCWSTR, Unicode parameters (for those who can use it)
+    long    lpDirectoryW;   // LPCWSTR, Unicode directory (for those who can use it)
+    long    lpTitleW;       // LPCWSTR, Unicode title (for those who can use it)
+} CMINVOKECOMMANDINFOEX;
+typedef CMINVOKECOMMANDINFOEX *LPCMINVOKECOMMANDINFOEX;
+
+
+//=============================================================
+// IID_IContextMenu
+[
+    uuid(000214E4-0000-0000-C000-000000000046),
+    helpstring("IContextMenu Interface"),
+    odl
+]
+
+interface IContextMenu : IUnknown
+{
+    long    QueryContextMenu(
+                    [in]     HMENU  hmenu,
+                    [in]     UINT   indexMenu,
+                    [in]     UINT   idCmdFirst,
+                    [in]     UINT   idCmdLast,
+                    [in]     UINT   uFlags);
+
+    long    InvokeCommand(
+                    [in]     LPCMINVOKECOMMANDINFO lpici);
+
+    long    GetCommandString(
+                    [in]     UINT   idCmd,
+                    [in]     UINT   uType,
+                    [in]     UINT   *pwReserved,
+                    [in,out] LPSTR  pszName,
+                    [in]     UINT   cchMax);
+};
+
+typedef IContextMenu *  LPCONTEXTMENU;
+
+//   --------------------- v 1.3 --------------------
+
+//=============================================================
+// IID_IContextMenu2
+[
+    uuid(000214F4-0000-0000-C000-000000000046),
+    helpstring("IContextMenu2 Interface"),
+    odl
+]
+
+interface IContextMenu2 : IContextMenu
+{
+    // *** IUnknown methods ***
+    // *** IContextMenu methods ***
+
+    // *** IContextMenu2 methods ***
+
+    long    HandleMenuMsg(
+                    [in]     UINT   uMsg,
+                    [in]     WPARAM wParam,
+                    [in]     LPARAM lParam);
+}
+
+typedef IContextMenu2 * LPCONTEXTMENU2;
+
+//=============================================================
+// IID_IContextMenu3, shell32.dll v4.71
+[
+    uuid(BCFCE0A0-EC17-11d0-8D10-00A0C90F2719),
+    helpstring("IContextMenu3 Interface"),
+    odl
+]
+
+interface IContextMenu3 : IContextMenu2
+{
+    // *** IUnknown methods ***
+    // *** IContextMenu methods ***
+    // *** IContextMenu2 methods ***
+
+    // *** IContextMenu3 methods ***
+
+    long    HandleMenuMsg2(
+                    [in]     UINT    uMsg,
+                    [in]     WPARAM  wParam,
+                    [in]     LPARAM  lParam,
+                    [in,out] LRESULT *plResult);
+}
+
+typedef IContextMenu3 * LPCONTEXTMENU3;

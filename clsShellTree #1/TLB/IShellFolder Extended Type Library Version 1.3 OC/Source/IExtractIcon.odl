@@ -1,0 +1,168 @@
+// IExtractIcon.odl
+// all interface methods return HRESULT. Exchanged for long to use return when calling from VB.
+// -> interfaces can't be implemented in VB, just for calling purposes!
+
+
+    // GetIconLocation input flags
+    typedef enum {
+        GIL_OPENICON 	 = 0x0001,
+        GIL_FORSHELL 	 = 0x0002,
+        GIL_ASYNC    	 = 0x0020,
+        GIL_DEFAULTICON  = 0x0040,
+        GIL_FORSHORTCUT  = 0x0080
+    } GETICONLOCATIONINPUT;
+
+    // GetIconLocation return flags
+    typedef enum {
+        GIL_SIMULATEDOC  = 0x0001,
+        GIL_PERINSTANCE  = 0x0002,
+        GIL_PERCLASS     = 0x0004,
+        GIL_NOTFILENAME  = 0x0008,
+        GIL_DONTCACHE    = 0x0010
+    } GETICONLOCATIONRETURN;
+    
+    //----------------------------------------------------------
+    // IShellIcon
+    //----------------------------------------------------------
+    [
+    	uuid(000214E5-0000-0000-C000-000000000046),
+    	version(1.0),
+    	helpstring("IShellIcon Interface"),
+    	odl
+  	]
+  	interface IShellIcon : IUnknown
+  	{
+        long GetIconOf(
+        	[in] long pIDL, 
+        	[in] GETICONLOCATIONINPUT flags, 
+        	[in, out] int *lpIconIndex);
+  	};
+
+    //----------------------------------------------------------
+    // IShellIconOverlay
+    //----------------------------------------------------------
+    
+  	[
+    	uuid(7D688A70-C613-11D0-999B-00C04FD655E1),
+    	version(1.0),
+    	helpstring("IShellIconOverlay Interface"),
+    	odl
+  	]
+  	interface IShellIconOverlay : IUnknown
+  	{
+
+    	long GetOverlayIndex(
+    		[in] long pIDL, 
+    		[in, out] long* OverlayIndex);
+    
+    	long GetOverlayIconIndex(
+    		[in] long pIDL, 
+    		[in, out] long* IconIndex);
+  	};
+
+    //----------------------------------------------------------
+    // IExtractIcon
+    //----------------------------------------------------------
+
+    [
+        uuid(000214eb-0000-0000-c000-000000000046),
+        helpstring("IExtractIconA Interface"),
+        odl
+    ]
+    interface IExtractIconA : IUnknown
+    {
+
+        long GetIconLocation(
+                      [in] UINT uFlags,
+                      [in] LPSTR szIconFile,
+                      [in] UINT cchMax,
+                      [in, out] long *piIndex,
+                      [in, out] GETICONLOCATIONRETURN *pwFlags);
+
+
+        long Extract([in] LPCSTR pszFile,
+                        [in] UINT nIconIndex,
+                        [in, out] HICON *phiconLarge,
+                        [in, out] HICON *phiconSmall,
+                        [in] UINT nIconSize);
+    };
+
+    [
+        uuid(000214fa-0000-0000-c000-000000000046),
+        helpstring("IExtractIconW"),
+        odl
+    ]
+    interface IExtractIconW : IUnknown
+    {
+        long GetIconLocation(
+                      [in] UINT uFlags,
+                      [in] LPWSTR szIconFile,
+                      [in] UINT cchMax,
+                      [in, out] long *piIndex,
+                      [in, out] GETICONLOCATIONRETURN *pwFlags);
+
+        long Extract([in] LPWSTR pszFile,
+                        [in] UINT nIconIndex,
+                        [in, out] HICON *phiconLarge,
+                        [in, out] HICON *phiconSmall,
+                        [in] UINT nIconSize);
+    };
+    
+    //----------------------------------------------------------
+    // IExtractImage
+    //----------------------------------------------------------
+
+	typedef enum IEIConstants
+	{
+	IEI_PRIORITY_MAX 	= 0x7fffffff,
+	IEI_PRIORITY_MIN 	= 0x00000000,
+	IEI_PRIORITY_NORMAL = 0x10000000
+	} IEIConstants;
+	
+	typedef enum IEIFLAGConstants
+	{
+	IEIFLAG_ASYNC 		= 0x0001,
+	IEIFLAG_CACHE 		= 0x0002,
+	IEIFLAG_ASPECT 		= 0x0004,
+	IEIFLAG_OFFLINE 	= 0x0008,
+	IEIFLAG_GLEAM 		= 0x0010,
+	IEIFLAG_SCREEN 		= 0x0020,
+	IEIFLAG_ORIGSIZE 	= 0x0040,
+	IEIFLAG_NOSTAMP 	= 0x0080,
+	IEIFLAG_NOBORDER 	= 0x0100,
+	IEIFLAG_QUALITY 	= 0x0200,
+	IEIFLAG_REFRESH 	= 0x0400
+	} IEIFLAGConstants;
+
+    [
+    	uuid(BB2E617C-0920-11D1-9A0B-00C04FC2D6C1),
+    	version(1.0),
+    	helpstring("IExtractImage Interface"),
+    	odl
+  	]
+  	interface IExtractImage : IUnknown
+  	{
+    	long GetLocation(
+    		[in] LPWSTR pszPathBuffer, 
+    		[in] long cch, 
+    		[in, out] IEIConstants *pdwPriority, 
+    		[in, out] SIZE *prgSize, 
+    		[in] long dwRecClrDepth, 
+    		[in, out] IEIFlagConstants *pdwFlags);
+    		
+    	long Extract(
+    		[in, out] long *phBmpThumbnail);
+  	};
+
+  	[
+    	uuid(953BB1EE-93B4-11D1-98A3-00C04FB687DA),
+    	version(1.0),
+    	helpstring("IExtractImage2 Interface"),
+    	odl
+  	]
+  	interface IExtractImage2 : IExtractImage
+  	{
+    	long GetDateStamp(
+    		[in, out] FILETIME *pDateStamp);
+  	}
+   
